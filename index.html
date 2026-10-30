@@ -1,0 +1,516 @@
+<!-- Three.js and Core Extensions CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/OBJExporter.js"></script>
+
+
+<!-- TOP TOOLBAR -->
+<header class="bg-panelheader border-b border-bordercolor h-14 px-4 flex items-center justify-between shrink-0 z-10">
+    <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-2 mr-4">
+            <i class="fa-solid fa-cube text-accent text-2xl"></i>
+            <span class="font-bold text-lg tracking-wide text-white">Model<span class="text-accent">Prep</span></span>
+            <span class="text-xs bg-panelbg text-gray-400 px-2 py-0.5 rounded border border-bordercolor">v3.0 Pro</span>
+        </div>
+
+        <div class="h-6 w-px bg-bordercolor mx-2"></div>
+
+        <!-- File Actions -->
+        <label class="tool-btn cursor-pointer px-3 py-1.5 rounded text-xs flex items-center space-x-1.5 bg-panelbg border border-bordercolor">
+            <i class="fa-solid fa-folder-open text-accent"></i>
+            <span>Otwórz plik (STL, OBJ, 3MF)</span>
+            <input type="file" id="file-input" multiple accept=".stl,.obj,.3mf" class="hidden">
+        </label>
+
+        <!-- Preset Shapes Dropdown -->
+        <div class="relative group">
+            <button class="tool-btn px-3 py-1.5 rounded text-xs flex items-center space-x-1.5 bg-panelbg border border-bordercolor">
+                <i class="fa-solid fa-shapes text-accent"></i>
+                <span>Dodaj wzorzec</span>
+                <i class="fa-solid fa-chevron-down text-[10px] ml-1"></i>
+            </button>
+            <div class="absolute left-0 top-full mt-1 w-48 bg-panelbg border border-bordercolor rounded shadow-xl hidden group-hover:block z-50">
+                <button onclick="App.generatePreset('cube')" class="w-full text-left px-3 py-2 text-xs hover:bg-bordercolor hover:text-accent flex items-center space-x-2">
+                    <i class="fa-solid fa-cube"></i> <span>Kostka testowa 20mm</span>
+                </button>
+                <button onclick="App.generatePreset('benchy')" class="w-full text-left px-3 py-2 text-xs hover:bg-bordercolor hover:text-accent flex items-center space-x-2">
+                    <i class="fa-solid fa-ship"></i> <span>Łódka kalibracyjna</span>
+                </button>
+                <button onclick="App.generatePreset('stand')" class="w-full text-left px-3 py-2 text-xs hover:bg-bordercolor hover:text-accent flex items-center space-x-2">
+                    <i class="fa-solid fa-mobile-screen"></i> <span>Stojak na telefon</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="h-6 w-px bg-bordercolor mx-2"></div>
+
+        <!-- Transformations & Alignment -->
+        <button onclick="App.autoPlaceOnBed()" class="tool-btn px-3 py-1.5 rounded text-xs flex items-center space-x-1.5 bg-panelbg border border-bordercolor" title="Postaw spodem na stole">
+            <i class="fa-solid fa-plane-arrival text-accent"></i>
+            <span>Na stół</span>
+        </button>
+        <button onclick="App.autoCenterModel()" class="tool-btn px-3 py-1.5 rounded text-xs flex items-center space-x-1.5 bg-panelbg border border-bordercolor" title="Wyśrodkuj na stole">
+            <i class="fa-solid fa-crosshairs text-accent"></i>
+            <span>Centruj</span>
+        </button>
+        <button onclick="App.clearAllObjects()" class="tool-btn px-3 py-1.5 rounded text-xs flex items-center space-x-1.5 bg-panelbg border border-bordercolor text-red-400 hover:text-red-300" title="Usuń wszystko">
+            <i class="fa-solid fa-trash"></i>
+            <span>Wyczyść</span>
+        </button>
+    </div>
+
+    <div class="flex items-center space-x-3">
+        <!-- Undo / Redo -->
+        <div class="flex space-x-1 bg-panelbg p-1 rounded border border-bordercolor">
+            <button onclick="App.undoTransform()" class="tool-btn px-2 py-1 rounded text-xs" title="Cofnij (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
+            <button onclick="App.redoTransform()" class="tool-btn px-2 py-1 rounded text-xs" title="Ponów (Ctrl+Y)"><i class="fa-solid fa-rotate-right"></i></button>
+        </div>
+
+        <!-- Slicer Action Button -->
+        <button id="btn-slice" onclick="App.startSlicingProcess()" class="bg-accent hover:bg-accenthover text-darkbg font-semibold px-4 py-1.5 rounded text-xs flex items-center space-x-2 shadow-lg shadow-accent/20 transition-all">
+            <i class="fa-solid fa-layer-group"></i>
+            <span>URUCHOM SLICER</span>
+        </button>
+
+        <!-- Export Options Dropdown -->
+        <div class="relative group">
+            <button class="tool-btn px-3 py-1.5 rounded text-xs flex items-center space-x-1.5 bg-panelbg border border-bordercolor">
+                <i class="fa-solid fa-file-export text-accent"></i>
+                <span>Eksportuj</span>
+                <i class="fa-solid fa-chevron-down text-[10px]"></i>
+            </button>
+            <div class="absolute right-0 top-full mt-1 w-56 bg-panelbg border border-bordercolor rounded shadow-xl hidden group-hover:block z-50">
+                <button onclick="Exporter.exportModel('stl')" class="w-full text-left px-3 py-2 text-xs hover:bg-bordercolor hover:text-accent flex items-center space-x-2">
+                    <i class="fa-solid fa-file-code"></i> <span>Eksportuj STL (z transformacjami)</span>
+                </button>
+                <button onclick="Exporter.exportModel('obj')" class="w-full text-left px-3 py-2 text-xs hover:bg-bordercolor hover:text-accent flex items-center space-x-2">
+                    <i class="fa-solid fa-file-lines"></i> <span>Eksportuj OBJ</span>
+                </button>
+                <button onclick="Exporter.exportModel('gcode')" class="w-full text-left px-3 py-2 text-xs hover:bg-bordercolor hover:text-accent flex items-center space-x-2">
+                    <i class="fa-solid fa-terminal"></i> <span>Eksportuj G-code (Slicer)</span>
+                </button>
+                <button onclick="App.exportProjectJSON()" class="w-full text-left px-3 py-2 text-xs hover:bg-bordercolor hover:text-accent flex items-center space-x-2">
+                    <i class="fa-solid fa-floppy-disk"></i> <span>Zapisz projekt (.json)</span>
+                </button>
+                <div class="border-t border-bordercolor my-1"></div>
+                <button onclick="Exporter.showZcodexInfo()" class="w-full text-left px-3 py-2 text-xs text-gray-400 hover:bg-bordercolor hover:text-white flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-info text-accent"></i> <span>Format .ZCODEX — informacje</span>
+                </button>
+            </div>
+        </div>
+
+        <button onclick="App.toggleFullscreen()" class="tool-btn p-2 rounded text-xs bg-panelbg border border-bordercolor" title="Tryb pełnoekranowy">
+            <i class="fa-solid fa-expand"></i>
+        </button>
+    </div>
+</header>
+
+<!-- MAIN WORKSPACE CONTAINER -->
+<div class="flex-1 flex overflow-hidden relative">
+
+    <!-- LEFT PANEL: Object Tree & Geometry List -->
+    <aside class="w-72 bg-panelbg border-r border-bordercolor flex flex-col z-10 shrink-0">
+        <div class="p-3 border-b border-bordercolor bg-panelheader flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center space-x-1.5">
+                <i class="fa-solid fa-cubes text-accent"></i>
+                <span>Obiekty na stole</span>
+            </span>
+            <span id="object-count" class="text-[10px] bg-darkbg text-accent px-2 py-0.5 rounded-full border border-bordercolor">0</span>
+        </div>
+
+        <!-- Batch actions -->
+        <div class="px-3 py-2 bg-darkbg/50 border-b border-bordercolor flex items-center justify-between text-[11px]">
+            <button onclick="App.groupSelectedObjects()" class="text-accent hover:underline flex items-center space-x-1"><i class="fa-solid fa-object-group"></i><span>Grupuj</span></button>
+            <button onclick="App.ungroupObjects()" class="text-gray-400 hover:text-white flex items-center space-x-1"><i class="fa-solid fa-object-ungroup"></i><span>Rozgrupuj</span></button>
+            <button onclick="App.exportSelectedSTL()" class="text-green-400 hover:underline flex items-center space-x-1"><i class="fa-solid fa-download"></i><span>STL</span></button>
+        </div>
+
+        <div id="object-list" class="flex-1 overflow-y-auto p-2 space-y-1.5">
+            <div id="empty-state" class="text-center py-10 px-4 text-gray-500 text-xs">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl mb-2 text-gray-600"></i>
+                <p>Przeciągnij pliki STL, OBJ lub 3MF tutaj lub użyj przycisku importu.</p>
+            </div>
+        </div>
+
+        <!-- Printer Profile Quick View -->
+        <div class="p-3 border-t border-bordercolor bg-panelheader">
+            <div class="text-[11px] font-semibold text-gray-400 mb-1.5 flex items-center justify-between">
+                <span>AKTYWNA DRUKARKA</span>
+                <i class="fa-solid fa-print text-accent"></i>
+            </div>
+            <div class="bg-darkbg p-2 rounded border border-bordercolor text-xs">
+                <div class="font-medium text-accent">Zortrax M200 Plus</div>
+                <div class="text-[10px] text-gray-400 mt-0.5">Pole robocze: 200 × 200 × 180 mm</div>
+                <div class="text-[10px] text-gray-400">Dysza: 0.4 mm | Format: G-code / STL</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- CENTER VIEWPORT (3D Canvas) -->
+    <main class="flex-1 relative bg-darkbg flex flex-col overflow-hidden">
+        <div id="viewport-3d" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+
+        <!-- Floating View Orientation Cube / Buttons -->
+        <div class="absolute top-4 right-4 flex flex-col space-y-1 bg-panelbg/80 backdrop-blur p-1 rounded-lg border border-bordercolor z-10">
+            <button onclick="Viewer.setCameraView('iso')" class="tool-btn px-2.5 py-1 rounded text-[10px] font-medium" title="Widok izometryczny">ISO</button>
+            <button onclick="Viewer.setCameraView('top')" class="tool-btn px-2.5 py-1 rounded text-[10px] font-medium" title="Widok z góry">GÓRA</button>
+            <button onclick="Viewer.setCameraView('front')" class="tool-btn px-2.5 py-1 rounded text-[10px] font-medium" title="Widok z przodu">PRZÓD</button>
+            <button onclick="Viewer.setCameraView('side')" class="tool-btn px-2.5 py-1 rounded text-[10px] font-medium" title="Widok z boku">BOK</button>
+            <button onclick="Viewer.fitCameraToSelection()" class="tool-btn px-2.5 py-1 rounded text-[10px] font-medium text-accent" title="Dopasuj widok (F)">FIT</button>
+        </div>
+
+        <!-- Transform Tool Switcher Floating Bar -->
+        <div class="absolute top-4 left-4 flex space-x-1 bg-panelbg/90 backdrop-blur p-1 rounded-lg border border-bordercolor z-10 shadow-lg">
+            <button id="tool-translate" onclick="Viewer.setTransformTool('translate')" class="tool-btn active px-3 py-1.5 rounded text-xs flex items-center space-x-1" title="Przesuwanie (G)">
+                <i class="fa-solid fa-arrows-up-down-left-right"></i>
+                <span>Przesuń</span>
+            </button>
+            <button id="tool-rotate" onclick="Viewer.setTransformTool('rotate')" class="tool-btn px-3 py-1.5 rounded text-xs flex items-center space-x-1" title="Obracanie (R)">
+                <i class="fa-solid fa-rotate"></i>
+                <span>Obróć</span>
+            </button>
+            <button id="tool-scale" onclick="Viewer.setTransformTool('scale')" class="tool-btn px-3 py-1.5 rounded text-xs flex items-center space-x-1" title="Skalowanie (S)">
+                <i class="fa-solid fa-maximize"></i>
+                <span>Skaluj</span>
+            </button>
+        </div>
+
+        <!-- Layer Preview Controls Overlay (Shown after Slicing) -->
+        <div id="slicer-controls-overlay" class="absolute bottom-4 left-4 right-4 bg-panelbg/95 backdrop-blur border border-bordercolor rounded-xl p-3 z-20 hidden shadow-2xl flex flex-col space-y-2">
+            <div class="flex items-center justify-between text-xs border-b border-bordercolor pb-2">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-layer-group text-accent"></i>
+                    <span class="font-bold text-white">Podgląd rzeczywistych warstw Slicera</span>
+                    <span id="slice-layer-badge" class="bg-accent/10 text-accent border border-accent/20 px-2 py-0.5 rounded text-[10px]">Warstwa: 0 / 0</span>
+                </div>
+                <div class="flex items-center space-x-4 text-[11px]">
+                    <span class="flex items-center space-x-1 text-green-400"><i class="fa-solid fa-clock"></i> <span id="est-time">0h 0m</span></span>
+                    <span class="flex items-center space-x-1 text-blue-400"><i class="fa-solid fa-spool"></i> <span id="est-filament">0.0m / 0g</span></span>
+                    <button onclick="App.togglePlayback()" id="play-pause-btn" class="tool-btn px-2.5 py-1 rounded bg-accent text-darkbg font-bold"><i class="fa-solid fa-play"></i></button>
+                    <button onclick="App.closeSlicePreview()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-sm"></i></button>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="App.stepLayer(-1)" class="tool-btn px-2 py-0.5 rounded text-xs"><i class="fa-solid fa-backward-step"></i></button>
+                <input type="range" id="layer-slider" min="0" max="100" value="100" class="flex-1 accent-accent" oninput="App.updateLayerPreview(this.value)">
+                <button onclick="App.stepLayer(1)" class="tool-btn px-2 py-0.5 rounded text-xs"><i class="fa-solid fa-forward-step"></i></button>
+                <span id="max-layer-label" class="text-[10px] text-gray-400 font-mono">100</span>
+            </div>
+
+            <!-- Layer Type Legend -->
+            <div class="flex items-center justify-center space-x-6 text-[10px] pt-1">
+                <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#ff3366]"></span><span>Obrys zewnętrzny</span></div>
+                <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#00e5ff]"></span><span>Obrysy wewnętrzne</span></div>
+                <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#ffcc00]"></span><span>Wypełnienie (Infill)</span></div>
+                <div class="flex items-center space-x-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#9955ff]"></span><span>Raft / Podpory</span></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- RIGHT PANEL: Properties, Print Settings, Slicer -->
+    <aside class="w-80 bg-panelbg border-l border-bordercolor flex flex-col z-10 shrink-0">
+        <!-- Tabs Header -->
+        <div class="flex border-b border-bordercolor bg-panelheader text-xs">
+            <button id="tab-transform-btn" onclick="App.switchTab('transform')" class="tab-btn active flex-1 py-3 font-medium text-center flex items-center justify-center space-x-1.5">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Transformacja</span>
+            </button>
+            <button id="tab-print-btn" onclick="App.switchTab('print')" class="tab-btn flex-1 py-3 font-medium text-center flex items-center justify-center space-x-1.5">
+                <i class="fa-solid fa-gear"></i>
+                <span>Parametry druku</span>
+            </button>
+        </div>
+
+        <!-- TAB 1: TRANSFORMATIONS -->
+        <div id="tab-transform" class="flex-1 overflow-y-auto p-4 space-y-4">
+            <!-- Selected Model Stats -->
+            <div class="bg-darkbg p-3 rounded-lg border border-bordercolor space-y-2">
+                <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex justify-between">
+                    <span>Wymiary AABB</span>
+                    <span id="model-poly-count" class="text-accent text-[10px]">Trójkąty: 0</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-panelbg p-1.5 rounded border border-bordercolor">
+                        <span class="text-[10px] text-red-400 block font-mono">X (Szer)</span>
+                        <span id="dim-x" class="text-xs font-semibold text-white">0.0 mm</span>
+                    </div>
+                    <div class="bg-panelbg p-1.5 rounded border border-bordercolor">
+                        <span class="text-[10px] text-green-400 block font-mono">Y (Głęb)</span>
+                        <span id="dim-y" class="text-xs font-semibold text-white">0.0 mm</span>
+                    </div>
+                    <div class="bg-panelbg p-1.5 rounded border border-bordercolor">
+                        <span class="text-[10px] text-blue-400 block font-mono">Z (Wys)</span>
+                        <span id="dim-z" class="text-xs font-semibold text-white">0.0 mm</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Position Controls -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-medium text-gray-300 flex items-center justify-between">
+                    <span>Pozycja (mm)</span>
+                    <button onclick="App.resetPosition()" class="text-[10px] text-accent hover:underline">Resetuj</button>
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="flex items-center space-x-1 bg-darkbg px-2 py-1 rounded border border-bordercolor">
+                        <span class="text-xs font-bold text-red-400">X:</span>
+                        <input type="number" id="pos-x" step="0.5" class="w-full bg-transparent border-none p-0 text-xs text-right" onchange="App.updateModelTransforms()">
+                    </div>
+                    <div class="flex items-center space-x-1 bg-darkbg px-2 py-1 rounded border border-bordercolor">
+                        <span class="text-xs font-bold text-green-400">Y:</span>
+                        <input type="number" id="pos-y" step="0.5" class="w-full bg-transparent border-none p-0 text-xs text-right" onchange="App.updateModelTransforms()">
+                    </div>
+                    <div class="flex items-center space-x-1 bg-darkbg px-2 py-1 rounded border border-bordercolor">
+                        <span class="text-xs font-bold text-blue-400">Z:</span>
+                        <input type="number" id="pos-z" step="0.5" class="w-full bg-transparent border-none p-0 text-xs text-right" onchange="App.updateModelTransforms()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rotation Controls & Quick Rotate Buttons -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-medium text-gray-300 flex items-center justify-between">
+                    <span>Rotacja (stopnie)</span>
+                    <button onclick="App.resetRotation()" class="text-[10px] text-accent hover:underline">Resetuj</button>
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="flex items-center space-x-1 bg-darkbg px-2 py-1 rounded border border-bordercolor">
+                        <span class="text-xs font-bold text-red-400">X:</span>
+                        <input type="number" id="rot-x" step="1" class="w-full bg-transparent border-none p-0 text-xs text-right" onchange="App.updateModelTransforms()">
+                    </div>
+                    <div class="flex items-center space-x-1 bg-darkbg px-2 py-1 rounded border border-bordercolor">
+                        <span class="text-xs font-bold text-green-400">Y:</span>
+                        <input type="number" id="rot-y" step="1" class="w-full bg-transparent border-none p-0 text-xs text-right" onchange="App.updateModelTransforms()">
+                    </div>
+                    <div class="flex items-center space-x-1 bg-darkbg px-2 py-1 rounded border border-bordercolor">
+                        <span class="text-xs font-bold text-blue-400">Z:</span>
+                        <input type="number" id="rot-z" step="1" class="w-full bg-transparent border-none p-0 text-xs text-right" onchange="App.updateModelTransforms()">
+                    </div>
+                </div>
+                <!-- Quick Angle Buttons -->
+                <div class="grid grid-cols-3 gap-1 pt-1">
+                    <button onclick="App.quickRotate('z', 90)" class="tool-btn text-[10px] bg-darkbg py-1 rounded border border-bordercolor">Z +90°</button>
+                    <button onclick="App.quickRotate('z', 45)" class="tool-btn text-[10px] bg-darkbg py-1 rounded border border-bordercolor">Z +45°</button>
+                    <button onclick="App.quickRotate('z', 15)" class="tool-btn text-[10px] bg-darkbg py-1 rounded border border-bordercolor">Z +15°</button>
+                </div>
+            </div>
+
+            <!-- Scale Controls -->
+            <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-medium text-gray-300">Skalowanie (%)</label>
+                    <label class="flex items-center space-x-1 cursor-pointer">
+                        <input type="checkbox" id="uniform-scale" checked class="rounded border-bordercolor accent-accent">
+                        <span class="text-[10px] text-gray-400">Proporcjonalne</span>
+                    </label>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="flex items-center space-x-1 bg-darkbg px-2 py-1 rounded border border-bordercolor">
+                        <span class="text-xs font-bold text-red-400">X:</span>
+                        <input type="number" id="scale-x" value="100" step="1" class="w-full bg-transparent border-none p-0 text-xs text-right" onchange="App.onScaleInputChange('x')">
+                    </div>
+                    <div class="flex items-center space-x-1 bg-darkbg px-2 py-1 rounded border border-bordercolor">
+                        <span class="text-xs font-bold text-green-400">Y:</span>
+                        <input type="number" id="scale-y" value="100" step="1" class="w-full bg-transparent border-none p-0 text-xs text-right" onchange="App.onScaleInputChange('y')">
+                    </div>
+                    <div class="flex items-center space-x-1 bg-darkbg px-2 py-1 rounded border border-bordercolor">
+                        <span class="text-xs font-bold text-blue-400">Z:</span>
+                        <input type="number" id="scale-z" value="100" step="1" class="w-full bg-transparent border-none p-0 text-xs text-right" onchange="App.onScaleInputChange('z')">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mirroring Tools -->
+            <div class="space-y-1.5 pt-2 border-t border-bordercolor">
+                <label class="text-xs font-medium text-gray-300">Odbicie lustrzane</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="App.mirrorModel('x')" class="tool-btn py-1 rounded text-xs border border-bordercolor bg-darkbg text-red-400">Odbij X</button>
+                    <button onclick="App.mirrorModel('y')" class="tool-btn py-1 rounded text-xs border border-bordercolor bg-darkbg text-green-400">Odbij Y</button>
+                    <button onclick="App.mirrorModel('z')" class="tool-btn py-1 rounded text-xs border border-bordercolor bg-darkbg text-blue-400">Odbij Z</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: PRINT PARAMETERS -->
+        <div id="tab-print" class="flex-1 overflow-y-auto p-4 space-y-3.5 hidden">
+            <!-- Profile selector & Saving custom profiles -->
+            <div class="bg-darkbg p-2.5 rounded border border-bordercolor space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-semibold text-accent">Zapisane profile druku</span>
+                    <button onclick="Profiles.saveCurrentAsProfile()" class="text-[10px] text-accent hover:underline"><i class="fa-solid fa-plus"></i> Zapisz profil</button>
+                </div>
+                <select id="user-profile-select" class="w-full" onchange="Profiles.loadSelectedProfile(this.value)">
+                    <option value="default">Zortrax M200 Plus — Domyślny Standard</option>
+                </select>
+            </div>
+
+            <!-- Layer Height & Quality -->
+            <div class="space-y-1">
+                <label class="text-xs font-semibold text-accent uppercase tracking-wider block">Jakość i Warstwy</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <span class="text-[10px] text-gray-400 block mb-1">Wysokość warstwy</span>
+                        <select id="param-layer-height" class="w-full">
+                            <option value="0.09">0.09 mm (Super Fine)</option>
+                            <option value="0.14">0.14 mm (Fine)</option>
+                            <option value="0.19" selected>0.19 mm (Standard M200)</option>
+                            <option value="0.29">0.29 mm (Draft Fast)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 block mb-1">Szerokość linii</span>
+                        <input type="number" id="param-line-width" value="0.4" step="0.01" class="w-full">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Infill Settings -->
+            <div class="space-y-1 border-t border-bordercolor pt-2">
+                <label class="text-xs font-semibold text-accent uppercase tracking-wider block">Wypełnienie (Infill)</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <span class="text-[10px] text-gray-400 block mb-1">Gęstość (%)</span>
+                        <input type="number" id="param-infill-density" value="20" min="0" max="100" class="w-full">
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 block mb-1">Wzór wypełnienia</span>
+                        <select id="param-infill-pattern" class="w-full">
+                            <option value="grid">Krata (Grid)</option>
+                            <option value="lines" selected>Liniowe (Lines)</option>
+                            <option value="concentric">Koncepcyjne</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shell & Walls -->
+            <div class="space-y-1 border-t border-bordercolor pt-2">
+                <label class="text-xs font-semibold text-accent uppercase tracking-wider block">Ścianki i Obrysy</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <span class="text-[10px] text-gray-400 block mb-1">Liczba obrysów</span>
+                        <input type="number" id="param-wall-loops" value="2" min="1" max="10" class="w-full">
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 block mb-1">Warstwy góra/dół</span>
+                        <input type="number" id="param-top-bottom-layers" value="4" min="1" max="10" class="w-full">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Material & Temperatures -->
+            <div class="space-y-1 border-t border-bordercolor pt-2">
+                <label class="text-xs font-semibold text-accent uppercase tracking-wider block">Materiały i Temperatura</label>
+                <div>
+                    <span class="text-[10px] text-gray-400 block mb-1">Profil materiałowy</span>
+                    <select id="param-material-preset" class="w-full mb-2" onchange="Profiles.applyMaterialPreset(this.value)">
+                        <option value="z-abs">Z-ABS (275°C / 80°C)</option>
+                        <option value="z-ultrat">Z-ULTRAT (275°C / 80°C)</option>
+                        <option value="z-pla" selected>Z-PLA Pro (210°C / 50°C)</option>
+                        <option value="z-petg">Z-PETG (245°C / 70°C)</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <span class="text-[10px] text-gray-400 block mb-1">Dysza (°C)</span>
+                        <input type="number" id="param-nozzle-temp" value="210" class="w-full">
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 block mb-1">Stół roboczy (°C)</span>
+                        <input type="number" id="param-bed-temp" value="50" class="w-full">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Speed & Cooling -->
+            <div class="space-y-1 border-t border-bordercolor pt-2">
+                <label class="text-xs font-semibold text-accent uppercase tracking-wider block">Prędkości i Chłodzenie</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <span class="text-[10px] text-gray-400 block mb-1">Prędkość druku (mm/s)</span>
+                        <input type="number" id="param-print-speed" value="60" class="w-full">
+                    </div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 block mb-1">Pierwsza warstwa (%)</span>
+                        <input type="number" id="param-first-layer-speed" value="50" class="w-full">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Adhesion & Supports -->
+            <div class="space-y-1.5 border-t border-bordercolor pt-2">
+                <label class="text-xs font-semibold text-accent uppercase tracking-wider block">Adhezja i Podpory</label>
+                <div class="space-y-1.5 text-xs">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <span class="text-gray-300">Generuj Zortrax Raft (Tratwa)</span>
+                        <input type="checkbox" id="param-raft" checked class="accent-accent">
+                    </label>
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <span class="text-gray-300">Automatyczne Podpory (Support)</span>
+                        <input type="checkbox" id="param-support" class="accent-accent">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<!-- BOTTOM STATUS BAR -->
+<footer class="bg-panelheader border-t border-bordercolor h-8 px-4 flex items-center justify-between text-xs text-gray-400 shrink-0 z-10 font-mono">
+    <div class="flex items-center space-x-4">
+        <span id="status-selection" class="flex items-center space-x-1">
+            <i class="fa-solid fa-cube text-accent"></i>
+            <span>Brak zaznaczonego obiektu</span>
+        </span>
+        <span class="text-bordercolor">|</span>
+        <span id="status-mesh-info">Trójkąty: 0 | Wierzchołki: 0</span>
+    </div>
+
+    <div class="flex items-center space-x-4">
+        <span id="status-bed-check" class="flex items-center space-x-1 text-success">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>Wewnątrz pola roboczego M200</span>
+        </span>
+    </div>
+</footer>
+
+<!-- TOAST NOTIFICATION CONTAINER -->
+<div id="toast-container" class="fixed bottom-12 right-6 flex flex-col space-y-2 z-50 pointer-events-none"></div>
+
+<!-- ZCODEX INFO MODAL -->
+<div id="zcodex-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-panelbg border border-bordercolor max-w-md w-full rounded-xl p-6 shadow-2xl relative">
+        <button onclick="Exporter.closeZcodexInfo()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <div class="flex items-center space-x-3 text-accent mb-4">
+            <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+            <h3 class="font-bold text-lg text-white">Informacja o formacie .ZCODEX</h3>
+        </div>
+        <div class="space-y-3 text-xs text-gray-300 leading-relaxed">
+            <p>
+                Format <strong>.ZCODEX / .ZCODEX2</strong> jest zamkniętym, szyfrowanym kodem maszynowym firmy Zortrax dla drukarek serii M200.
+            </p>
+            <p>
+                ModelPrep generuje w pełni zweryfikowany, uniwersalny plik <strong>G-code</strong> oraz gotowe pliki <strong>STL/OBJ</strong> z uwzględnieniem wszystkich transformacji.
+            </p>
+            <p class="bg-darkbg p-2.5 rounded border border-bordercolor text-accent">
+                <strong>Zalecenie:</strong> Wyeksportuj plik STL z ModelPrep i zaimportuj go do darmowego programu <em>Z-SUITE</em> w celu bezpośredniego przesłania na drukarkę Zortrax M200 Plus.
+            </p>
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button onclick="Exporter.closeZcodexInfo()" class="bg-accent text-darkbg font-semibold px-4 py-2 rounded text-xs hover:bg-accenthover">Rozumiem</button>
+        </div>
+    </div>
+</div>
+
+<!-- INCLUDE MODULAR SCRIPTS -->
+<script src="profiles.js"></script>
+<script src="importer.js"></script>
+<script src="slicer.js"></script>
+<script src="exporter.js"></script>
+<script src="viewer.js"></script>
+<script src="app.js"></script>
