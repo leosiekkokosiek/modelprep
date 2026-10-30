@@ -1,0 +1,70 @@
+body {
+font-family: 'Inter', sans-serif;
+background-color: #111318;
+color: #e1e7ed;
+user-select: none;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+width: 6px;
+height: 6px;
+}
+::-webkit-scrollbar-track {
+background: #15181e;
+}
+::-webkit-scrollbar-thumb {
+background: #2a303d;
+border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+background: #00e5ff;
+}
+
+.tab-btn.active {
+border-bottom: 2px solid #00e5ff;
+color: #00e5ff;
+background-color: rgba(0, 229, 255, 0.05);
+}
+
+.tool-btn {
+transition: all 0.15s ease-in-out;
+}
+.tool-btn:hover {
+background-color: #2a303d;
+color: #00e5ff;
+}
+.tool-btn.active {
+background-color: #00e5ff;
+color: #111318;
+font-weight: 600;
+}
+
+input[type="number"], select, input[type="text"] {
+background-color: #15181e;
+border: 1px solid #2a303d;
+color: #e1e7ed;
+border-radius: 0.375rem;
+padding: 0.25rem 0.5rem;
+font-size: 0.8125rem;
+outline: none;
+}
+input[type="number"]:focus, select:focus, input[type="text"]:focus {
+border-color: #00e5ff;
+}
+
+/* Range Slider */
+input[type=range] {
+-webkit-appearance: none;
+background: #15181e;
+border-radius: 4px;
+height: 6px;
+}
+input[type=range]::-webkit-slider-thumb {
+-webkit-appearance: none;
+height: 14px;
+width: 14px;
+border-radius: 50%;
+background: #00e5ff;
+cursor: pointer;
+}
